@@ -14,7 +14,7 @@ import (
 type Error struct {
 	File string
 	Line int
-	Err error
+	Err  error
 }
 
 func (e *Error) Error() string {
