@@ -30,9 +30,14 @@ func (e *Error) Unwrap() error { return e.Err }
 // The reader must contain newline-delimited name=value pairs for each set flag.
 // Comments begin at any # or ; character and whitespace is trimmed.
 // INI sections (in the form [Section Name]) and empty lines are ignored.
-func Parse(r io.Reader, fs *flag.FlagSet) error {
-	scanner := bufio.NewScanner(r)
+func Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 	line := 0
+	defer func() {
+		if err != nil {
+			err = &Error{Line: line, Err: err}
+		}
+	}()
+	scanner := bufio.NewScanner(r)
 	for ; scanner.Scan(); line++ {
 		s := scanner.Text()
 		comment := strings.IndexAny(s, "#;")
@@ -49,19 +54,16 @@ func Parse(r io.Reader, fs *flag.FlagSet) error {
 		}
 		equals := strings.IndexByte(s, '=')
 		if equals == -1 {
-			return &Error{Line: line, Err: fmt.Errorf("parse error: %q", s)}
+			return fmt.Errorf("parse error: %q", s)
 		}
 		k := strings.TrimSpace(s[:equals])
 		v := strings.TrimSpace(s[equals+1:])
 		err := fs.Set(k, v)
 		if err != nil {
-			return &Error{Line: line, Err: err}
+			return err
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return &Error{Line: line, Err: err}
-	}
-	return nil
+	return scanner.Err()
 }
 
 type config struct {
@@ -76,7 +78,7 @@ func ConfigFlag(fs *flag.FlagSet) flag.Value {
 
 func (c *config) String() string { return "" }
 
-func (c *config) Set(value string) error {
+func (c *config) Set(value string) (err error) {
 	fi, err := os.Open(value)
 	if err != nil {
 		return err
@@ -88,8 +90,5 @@ func (c *config) Set(value string) error {
 		e.File = fi.Name()
 		return e
 	}
-	if err != nil {
-		return &Error{File: fi.Name(), Err: err}
-	}
-	return nil
+	return err
 }
