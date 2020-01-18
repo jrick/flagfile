@@ -88,7 +88,6 @@ func (c *config) Set(value string) (err error) {
 	var e *Error
 	if errors.As(err, &e) {
 		e.File = fi.Name()
-		return e
 	}
 	return err
 }
