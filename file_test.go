@@ -25,7 +25,8 @@ func newFlags() (*flags, *flag.FlagSet) {
 
 func parseFlags(contents string) (*flags, error) {
 	f, fs := newFlags()
-	err := Parse(strings.NewReader(contents), fs)
+	var p Parser
+	err := p.Parse(strings.NewReader(contents), fs)
 	return f, err
 }
 
@@ -48,11 +49,23 @@ s=abc
 }
 
 func TestUnknown(t *testing.T) {
-	f, err := parseFlags(`
+	const cfg = `
 unknown=value
-`)
+`
+	f, err := parseFlags(cfg)
 	if err == nil {
 		t.Errorf("expected parse error")
+	}
+	if *f != (flags{}) {
+		t.Errorf("flags were unexpectedly parsed: %+v", f)
+	}
+
+	f, fs := newFlags()
+	var p Parser
+	p.AllowUnknown = true
+	err = p.Parse(strings.NewReader(cfg), fs)
+	if err != nil {
+		t.Errorf("parsing errored on unknown option with AllowUnknown=true: %v", err)
 	}
 	if *f != (flags{}) {
 		t.Errorf("flags were unexpectedly parsed: %+v", f)
