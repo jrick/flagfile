@@ -36,7 +36,7 @@ type Parser struct {
 // Parse parses an io.Reader for configuration of a flag.FlagSet.
 // The reader must contain newline-delimited name=value pairs for each set flag.
 // Comments begin at any # or ; character and whitespace is trimmed.
-// INI sections (in the form [Section Name]) and empty lines are ignored.
+// INI section headers (in the form [Section Name]) and empty lines are ignored.
 func (p *Parser) Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 	line := 0
 	defer func() {
@@ -60,7 +60,7 @@ func (p *Parser) Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 		if s == "" {
 			continue
 		}
-		// Ignore INI sections
+		// Ignore INI section headers
 		if len(s) >= 2 && s[0] == '[' && s[len(s)-1] == ']' {
 			continue
 		}
@@ -94,7 +94,7 @@ var defaultParser Parser
 // Parse uses the default Parser to parse an io.Reader for configuration of a flag.FlagSet.
 // The reader must contain newline-delimited name=value pairs for each set flag.
 // Comments begin at any # or ; character and whitespace is trimmed.
-// INI sections (in the form [Section Name]) and empty lines are ignored.
+// INI section headers (in the form [Section Name]) and empty lines are ignored.
 func Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 	return defaultParser.Parse(r, fs)
 }
