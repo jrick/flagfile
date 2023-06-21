@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Error reports the filename and line number where parsing errors occured.
+// Error reports the filename and line number where parsing errors occurred.
 type Error struct {
 	File string
 	Line int
@@ -31,12 +31,15 @@ type Parser struct {
 	// AllowUnknown specifies whether Parse should skip unknown flag errors,
 	// or return these errors to the caller.
 	AllowUnknown bool
+
+	// ParseSections specifies whether to parse INI sections (in the form
+	// [Section Name]).  By default, INI section headers are ignored.
+	ParseSections bool
 }
 
 // Parse parses an io.Reader for configuration of a flag.FlagSet.
 // The reader must contain newline-delimited name=value pairs for each set flag.
 // Comments begin at any # or ; character and whitespace is trimmed.
-// INI section headers (in the form [Section Name]) and empty lines are ignored.
 func (p *Parser) Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 	line := 0
 	defer func() {
@@ -49,6 +52,7 @@ func (p *Parser) Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 		}
 		err = &Error{File: file, Line: line, Err: err}
 	}()
+	var section string
 	scanner := bufio.NewScanner(r)
 	for ; scanner.Scan(); line++ {
 		s := scanner.Text()
@@ -60,8 +64,11 @@ func (p *Parser) Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 		if s == "" {
 			continue
 		}
-		// Ignore INI section headers
+		// Check INI section headers
 		if len(s) >= 2 && s[0] == '[' && s[len(s)-1] == ']' {
+			if p.ParseSections && len(s) > 2 {
+				section = s[1 : len(s)-1]
+			}
 			continue
 		}
 		equals := strings.IndexByte(s, '=')
@@ -70,6 +77,9 @@ func (p *Parser) Parse(r io.Reader, fs *flag.FlagSet) (err error) {
 		}
 		k := strings.TrimSpace(s[:equals])
 		v := strings.TrimSpace(s[equals+1:])
+		if section != "" {
+			k = fmt.Sprintf("%s.%s", section, k)
+		}
 		err := fs.Set(k, v)
 		if err != nil {
 			// The flag package returns fmt.Errorf for unrecognized
